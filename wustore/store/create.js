@@ -32,13 +32,13 @@ const strTransformPath = function( _store,str,cb){
     str.replace(/(\w+)(?=\.)|(\w+)\[(\w+)\]|\[(\w+)\]/g,function($1,chain1,chain2,brackets1,brackets2){ 
         
         if( chain1 ){
-            // ''
+            
             points.push( points[points.length-1][chain1] )
             keys.push( chain1 )
             str = str.replace($1 + '.','')
         }
         else if( chain2 && brackets1 ){
-            // ''
+            
             points.push( points[points.length-1][chain2] )
             keys.push( chain2 )
             points.push( points[points.length-1][brackets1] )
@@ -46,7 +46,7 @@ const strTransformPath = function( _store,str,cb){
             str = str.replace($1,'')
         }
         else if( brackets2 ){
-            // ''
+            
             points.push( points[points.length-1][brackets2] )
             keys.push( brackets2 )
             str = str.replace($1,'')
@@ -88,8 +88,8 @@ const observerCB = function(setdata,key,newval,dataPath){
     
     // 不是在 updateStore 中执行的更新 observerCb 不往下执行 
     if( !isUpdate ){
-        // ''
-        // ''
+        
+        
         setdata[key] = newval
         return;
     } 
@@ -161,7 +161,7 @@ const setStoreProp = function(storeDataPath,setkey,val){
 
 // 防止框架之外的逻辑重写onShow 
 const __observerPageShowHook = function(mapstore){
-    // ''
+    
     const onshow = this.onShow
 
     const beforeShow = function(mapstore){
@@ -176,7 +176,7 @@ const __observerPageShowHook = function(mapstore){
                                                      updateData.getUpdataData( useStore.currentPage.id,that.__wxExparserNodeId__  ) :
                                                      updateData.getUpdataData( useStore.currentPage.id ) )
 
-            // ''
+            
             
             const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
 
@@ -360,7 +360,7 @@ const getMapStore = function(that,mapstore = [],watch = {}){
 
     // 拥有onShow 与 onUnload 为 page 否则为 组件
     if( that.onShow && that.onUnload ){
-        // ''
+        
         __observerPageShowHook.bind(that,mapstore)()
         __observerWxPageUnloadHook.bind(that)()
         useStore.currentPage.id = that.data.__webviewId__
@@ -368,7 +368,7 @@ const getMapStore = function(that,mapstore = [],watch = {}){
         useStore.pages.push( that )
     }
     else{
-        // ''
+        
         isComponents = true;
         if( !useStore.pageComponents[useStore.currentPage.id] ){
             useStore.pageComponents[useStore.currentPage.id] = []
@@ -415,8 +415,8 @@ export {
 // Object.keys(page.watch).forEach((dataPath)=>{
     // strTransformPath(store,dataPath,(point,key,points,keys)=>{ 
     //     let watchPath = '' 
-    //     // ''
-    //     // ''
+    //     
+    //     
     //     keys.forEach( (key,index) => {
     //         ''
     //         if( isArray(points[index]) ){ watchPath += `[${key}]` } 
@@ -436,12 +436,12 @@ export {
 // push 数组新增之后也可以监听最新索引
 // store.a.push('111')
 // store.a[3] = '222'
-// ''
+
 
 // unshift 数组新增之后也可以监听最新索引
 // store.a.unshift('111')
 // store.a[0] = '222'
-// ''
+
 
 // 嵌套的属性也可以监听的到
 // store.b.two[1][2] = '111'
@@ -451,11 +451,11 @@ export {
 
 // 对象中的
 // store.c = { a:'1',b:'2' }
-// ''
+
 // store.c.a = 111
 
 // store.c = [1,2,3]
-// ''
+
 // store.c[0] = 'aaa'
 
 //数组中的

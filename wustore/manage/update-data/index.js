@@ -59,7 +59,7 @@ class UpdateData{
         }
     }
     setUpdataData(webviewId,dataPath,dataRoot,clean,newval,nodeId){
-        
+
         const todoUpdate = nodeId ? 
                            this.getUpdataData( webviewId,nodeId ) :
                            this.getUpdataData( webviewId )
@@ -67,7 +67,7 @@ class UpdateData{
         if(todoUpdate[dataRoot]){
             !todoUpdate[dataRoot] && (todoUpdate[dataRoot] = {})
             // 修改了引用类型 对之前对这个引用类型的值更新清楚 
-            if( clean){
+            if(clean){
                 Object.keys(todoUpdate[dataRoot]).forEach(key => {
                     new RegExp(`^store.${dataPath}`).test(key) && delete todoUpdate[dataRoot][key]
                 })

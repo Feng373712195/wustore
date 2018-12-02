@@ -32,13 +32,13 @@ const strTransformPath = function( _store,str,cb){
     str.replace(/(\w+)(?=\.)|(\w+)\[(\w+)\]|\[(\w+)\]/g,function($1,chain1,chain2,brackets1,brackets2){ 
         
         if( chain1 ){
-            // console.log('-- 1 --')
+            // ''
             points.push( points[points.length-1][chain1] )
             keys.push( chain1 )
             str = str.replace($1 + '.','')
         }
         else if( chain2 && brackets1 ){
-            // console.log('-- 2 --')
+            // ''
             points.push( points[points.length-1][chain2] )
             keys.push( chain2 )
             points.push( points[points.length-1][brackets1] )
@@ -46,7 +46,7 @@ const strTransformPath = function( _store,str,cb){
             str = str.replace($1,'')
         }
         else if( brackets2 ){
-            // console.log('-- 3 --')
+            // ''
             points.push( points[points.length-1][brackets2] )
             keys.push( brackets2 )
             str = str.replace($1,'')
@@ -69,6 +69,7 @@ const findWebview = function(webviewid){
 
 // wcstore setData
 const _setData = function(data){
+    ''
     isSetData.is = true
     this.setData(data)
     isSetData.is = false
@@ -82,72 +83,45 @@ const getDataRoot = function(dataPath){
 // 数据observer 观察回调
 const observerCB = function(setdata,key,newval,dataPath){
 
-    // 不是在 updateStore 中执行的更新 observerCb 不往下执行 
-    if( !isUpdate ) return; 
-
-    if( isSetData.is ) return 
     // 有时setData 会触发到 observerCb 如果是setData执行过程中调用到observerCb 不往下执行
-
-    // console.log( setdata[key] === newval )
-    const getOldVal = (val)=>{
-        if( val ){
-            return val.getObserverObject ? val.getObserverObject : val.getObserverArray ? val.getObserverArray : val
-        }else{
-            return val
-        }
-    }
+    if( isSetData.is ) return 
+    
+    // 不是在 updateStore 中执行的更新 observerCb 不往下执行 
+    if( !isUpdate ){
+        // ''
+        // ''
+        setdata[key] = newval
+        return;
+    } 
 
     // 防止赋 已经可以监听的值
     const getNewVal = (val)=>{
         return val.getSourceObject ? val.getSourceObject : val.getSourceArray ? val.getSourceArray : val
     }
-
-    // 判断是否是赋值 自己的值
-    if( getOldVal(setdata[key]) === newval ){
-        if( isObject( getOldVal(setdata[key]) ) ){
-           const diffkey = arrDiff( Object.keys( setdata[key] ),Object.keys( newval ) )
-
-           if( diffkey.length == 0 ) return 
-           diffkey.forEach( key => {
-                newval.getSourceObject[key] = newval[key]
-                setNewObserver( newval , newval.getSourceObject , observerCB , dataPath, key )
-           })
-
-        }
-        // if( isArray( getOldVal(setdata[key]) ) ){
-        //     const diffkey = arrDiff( Object.keys( setdata[key] ),Object.keys( newval ) )
-        //     if( diffkey.length === 0 ) return 
-        // }
-        console.log( 'set self' )
-    }
-
     // 小程序首页还未开始加载
     if( !useStore.currentPage.id ){ 
         setdata[key] = newval;
         return;
     }
-    
+    setdata[key] = getNewVal(newval);
+
+    //以下为watch与update操作    
     let cleanUpdate = false;
     const dataRoot = getDataRoot(dataPath);
-    
-    // 用于watch时返回
+    // 设置旧值 用于watch时返回
     let oldVal = null;
-
-    // 改变了引用类型的值
     if( isObject(setdata[key]) || isArray(setdata[key]) ){
+        // 改变了引用类型的值
         oldVal = deep( setdata[key] )
         cleanUpdate = true;
     }else{
         oldVal = setdata[key]
     }
-
-    setdata[key] = getNewVal(newval);
     const upDateNewVal = isObject( setdata ) ? setdata.getObserverObject[key] : setdata.getObserverArray[key]
     const curtPageComponents = useStore.pageComponents[useStore.currentPage.id]
     //页面记录更新
-    updateData.setUpdataData(useStore.currentPage.id,dataPath,dataRoot,cleanUpdate,upDateNewVal )
+    updateData.setUpdataData( useStore.currentPage.id,dataPath,dataRoot,cleanUpdate,upDateNewVal )
     watchMap.checkIsWatch( useStore.currentPage.id,dataPath, useStore.currentPage.webview ,oldVal,setdata[key] )
-
     //页面组件记录更新
     curtPageComponents && curtPageComponents.forEach( component=>{
         const componentId = component.__wxExparserNodeId__
@@ -162,9 +136,32 @@ const createStore = function(source){
     return store;
 }
 
+// 为引用对象设置新属性
+const setStoreProp = function(storeDataPath,setkey,val){
+
+    strTransformPath( store,storeDataPath,function(point,key){
+            const hasProp = point[key].hasOwnProperty(setkey);
+            
+            if( !hasProp ){
+                // 对新的属性的监听
+                const source = isObject( point ) ? point[key].getSourceObject : point[key].getSourceArray 
+                source[setkey] = '@@@new prop@@@'
+                setNewObserver( point[key] , 
+                                source , 
+                                observerCB , 
+                                `${storeDataPath}`,
+                                setkey )
+            }
+            
+            isUpdate = true
+            point[key][setkey] = val
+            isUpdate = false
+    })
+}
+
 // 防止框架之外的逻辑重写onShow 
 const __observerPageShowHook = function(mapstore){
-    // console.log( '__observerPageShowHook',this )
+    // ''
     const onshow = this.onShow
 
     const beforeShow = function(mapstore){
@@ -179,7 +176,7 @@ const __observerPageShowHook = function(mapstore){
                                                      updateData.getUpdataData( useStore.currentPage.id,that.__wxExparserNodeId__  ) :
                                                      updateData.getUpdataData( useStore.currentPage.id ) )
 
-            // console.log( updateData,'currenPageTodoUpdate' )
+            // ''
             
             const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
 
@@ -266,7 +263,6 @@ const updateStore = function(update){
     if( update && isObject(update) ){
         Object.keys( update ).forEach( dataPath => {
             strTransformPath( store,dataPath,function(point,key,points,keys){
-                
                 if( that ){
                     const dataRoot = getDataRoot(dataPath);
                     if( that.__mapstore.indexOf( dataRoot ) === -1 ){
@@ -274,18 +270,24 @@ const updateStore = function(update){
                         return;
                     }
                 }
-
+                
                 if( update[dataPath] === undefined ) return 
                 const hasProp = point.hasOwnProperty(key);
 
-                if( hasProp ){
-                    point[key] = update[dataPath];
-                }else{ 
+                if( !hasProp ){
                     // 对新的属性的监听
+                    const replacelastPropReg = /\[\d+\]|\.\w+$/
                     const source = isObject( point ) ? point.getSourceObject : point.getSourceArray ;
-                    source[key] = update[dataPath]
-                    setNewObserver( point , source , observerCB , isArray(point)? dataPath.replace( /\[\d+\]$/,'' ) : dataPath, key )
+                    source[key] = '@@@new prop@@@'
+                    setNewObserver( point , 
+                                    source , 
+                                    observerCB , 
+                                    dataPath.replace( replacelastPropReg ,'' ), 
+                                    key )
                 }
+                 
+                point[key] = update[dataPath];
+                
             })
         })
 
@@ -299,6 +301,8 @@ const updateStore = function(update){
     const currenPageTodoUpdate = updateData.getUpdataData(useStore.currentPage.id);
     const currentPageComponent = useStore.pageComponents[useStore.currentPage.id];
     const pageComponentsTodoUpdate =  updateData.pageComponentsUpdateMap.get(useStore.currentPage.id)
+
+    ''
 
     // 如果 没有更新的数据 则使用update不往下执行
     if( Object.keys( currenPageTodoUpdate ).length === 0 ){
@@ -356,7 +360,7 @@ const getMapStore = function(that,mapstore = [],watch = {}){
 
     // 拥有onShow 与 onUnload 为 page 否则为 组件
     if( that.onShow && that.onUnload ){
-        // console.log( 'page',that )
+        // ''
         __observerPageShowHook.bind(that,mapstore)()
         __observerWxPageUnloadHook.bind(that)()
         useStore.currentPage.id = that.data.__webviewId__
@@ -364,7 +368,7 @@ const getMapStore = function(that,mapstore = [],watch = {}){
         useStore.pages.push( that )
     }
     else{
-        // console.log( 'component',that )
+        // ''
         isComponents = true;
         if( !useStore.pageComponents[useStore.currentPage.id] ){
             useStore.pageComponents[useStore.currentPage.id] = []
@@ -388,25 +392,33 @@ const getMapStore = function(that,mapstore = [],watch = {}){
     }
 }
 
-const mapGlobalStore = function(mapstore){ 
+const appMapStore = function(mapstore){ 
     // 未处理异步情况
     globalStore = mapstore
 }
 
-const globaUpdateStore = function(update){ 
+const appUpdateStore = function(update){ 
     // 还未有 useStore.currentPage.id 说明 小程序page首页onShow还未完成
     updateStore.bind( useStore.currentPage.id ?
                       useStore.currentPage.webview : 
                       null )(update)
 }
 
+export { 
+    createStore,
+    getMapStore,
+    appMapStore,
+    appUpdateStore,
+    setStoreProp
+};
+
 // Object.keys(page.watch).forEach((dataPath)=>{
     // strTransformPath(store,dataPath,(point,key,points,keys)=>{ 
     //     let watchPath = '' 
-    //     // console.log( points )
-    //     // console.log( keys )
+    //     // ''
+    //     // ''
     //     keys.forEach( (key,index) => {
-    //         console.log( points[index],key )
+    //         ''
     //         if( isArray(points[index]) ){ watchPath += `[${key}]` } 
     //         else if( isObject(points[index]) ){ watchPath += `${index == 0 ? '': '.'}${key}` }
     //     })
@@ -424,12 +436,12 @@ const globaUpdateStore = function(update){
 // push 数组新增之后也可以监听最新索引
 // store.a.push('111')
 // store.a[3] = '222'
-// console.log( store.a[3] )
+// ''
 
 // unshift 数组新增之后也可以监听最新索引
 // store.a.unshift('111')
 // store.a[0] = '222'
-// console.log( store.a[0] )
+// ''
 
 // 嵌套的属性也可以监听的到
 // store.b.two[1][2] = '111'
@@ -439,22 +451,14 @@ const globaUpdateStore = function(update){
 
 // 对象中的
 // store.c = { a:'1',b:'2' }
-// console.log( store.c )
+// ''
 // store.c.a = 111
 
 // store.c = [1,2,3]
-// console.log( store.c )
+// ''
 // store.c[0] = 'aaa'
 
 //数组中的
 // store.a[0] = [1,2,3]
 // store.a[0] = { a:'1',b:'2' }
 // store.a[0].a = '111'
-
-export { 
-    createStore,
-    getMapStore,
-    mapGlobalStore,
-    globaUpdateStore
-};
-

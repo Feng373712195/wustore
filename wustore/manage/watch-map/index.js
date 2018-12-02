@@ -45,6 +45,7 @@ class watchMap {
     }
     checkIsWatch(webviewId,dataPath,that,oldVal,newVal){
 
+        console.log( oldVal,'oldVal' , newVal, 'newVal')
         
         // 检查页面是否有 watch 监听
         if( this.checkHasWatch(webviewId) ){

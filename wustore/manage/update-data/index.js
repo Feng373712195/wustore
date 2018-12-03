@@ -13,7 +13,7 @@ class UpdateData{
                          this.getUpdataData(updateWebvieId) 
 
         Object.keys(todo).forEach(key => {
-            if( ( isComponent ? component : webview ).__mapstore.indexOf(key) != -1 ){
+            if( ( isComponent ? component : webview ).__mapstorekey.indexOf(key) != -1 ){
                 !todoUpdate[key] && (todoUpdate[key] = {})
                 Object.assign( todoUpdate[key],todo[key] )
             }
@@ -69,12 +69,15 @@ class UpdateData{
             // 修改了引用类型 对之前对这个引用类型的值更新清楚 
             if(clean){
                 Object.keys(todoUpdate[dataRoot]).forEach(key => {
-                    new RegExp(`^store.${dataPath}`).test(key) && delete todoUpdate[dataRoot][key]
+                    // new RegExp(`^store.${dataPath}`).test(key) && delete todoUpdate[dataRoot][key]
+                    new RegExp(`^${dataPath}`).test(key) && delete todoUpdate[dataRoot][key]
                 })
             }
-            Object.assign( todoUpdate[dataRoot],{ [`store.${dataPath}`]:newval } )
+            // Object.assign( todoUpdate[dataRoot],{ [`store.${dataPath}`]:newval } )
+            Object.assign( todoUpdate[dataRoot],{ [`${dataPath}`]:newval } )
         }else{
-            todoUpdate[dataRoot] = { [`store.${dataPath}`]:newval }
+            // todoUpdate[dataRoot] = { [`store.${dataPath}`]:newval }
+            todoUpdate[dataRoot] = { [`${dataPath}`]:newval }
         }
     }
     removeUpdateData(webviewId){

@@ -69,7 +69,6 @@ const findWebview = function(webviewid){
 
 // wcstore setData
 const _setData = function(data){
-    ''
     isSetData.is = true
     this.setData(data)
     isSetData.is = false
@@ -88,8 +87,6 @@ const observerCB = function(setdata,key,newval,dataPath){
     
     // 不是在 updateStore 中执行的更新 observerCb 不往下执行 
     if( !isUpdate ){
-        
-        
         setdata[key] = newval
         return;
     } 
@@ -185,7 +182,8 @@ const __observerPageShowHook = function(mapstore){
                 todoUpdateKeys.forEach( dataPath => { 
 
                     watchMap.checkIsWatch(  useStore.currentPage.id ,
-                                            dataPath.replace('store.',''), 
+                                            // dataPath.replace('store.',''), 
+                                            dataPath,
                                             that,
                                             null,
                                             currenPageTodoUpdate[dataPath]
@@ -265,7 +263,7 @@ const updateStore = function(update){
             strTransformPath( store,dataPath,function(point,key,points,keys){
                 if( that ){
                     const dataRoot = getDataRoot(dataPath);
-                    if( that.__mapstore.indexOf( dataRoot ) === -1 ){
+                    if( that.__mapstorekey.indexOf( dataRoot ) === -1 ){
                         console.error(`no mapstore for ${ dataRoot }`)
                         return;
                     }
@@ -290,7 +288,6 @@ const updateStore = function(update){
                 
             })
         })
-
     }
 
     if( !that ){
@@ -301,8 +298,6 @@ const updateStore = function(update){
     const currenPageTodoUpdate = updateData.getUpdataData(useStore.currentPage.id);
     const currentPageComponent = useStore.pageComponents[useStore.currentPage.id];
     const pageComponentsTodoUpdate =  updateData.pageComponentsUpdateMap.get(useStore.currentPage.id)
-
-    ''
 
     // 如果 没有更新的数据 则使用update不往下执行
     if( Object.keys( currenPageTodoUpdate ).length === 0 ){
@@ -340,20 +335,33 @@ const updateStore = function(update){
     isUpdate = false
 }
 
+const getfilterStore = function(mapStoreKey){
+    let mapStore = {  }
+    mapStoreKey.forEach( storekey => {
+        if( this.data.hasOwnProperty(storekey) ) console.error( `page has data key for ${ storekey }` )
+        else if( !store.hasOwnProperty(storekey) ) console.error( `store not find ${storekey}` )
+        else Object.assign( mapStore,{ [storekey]:store[storekey]  } )
+    })
+    return mapStore
+}
+
+const addMapStore = function(addMapStoreKey){
+    if( !this ) return
+    if( !isArray(addMapStoreKey) ){
+         console.error('addMapStore param not array')
+    }
+    const diffMapStoreKey = arrDiff( this.__mapstorekey,addMapStoreKey )
+    this.__mapstorekey = this.__mapstorekey.concat(diffMapStoreKey)
+    _setData.bind(this, getfilterStore.call(this,diffMapStoreKey) )()
+}
+
 const getMapStore = function(that,mapstore = [],watch = {}){
 
     let isComponents = false;
     
     // 页面选择的 store
-    that.__mapstore = [...new Set(mapstore.concat(globalStore))]
-
-    const getSourceVal = (val) => isObject( val ) ? val.getSourceObject : isArray( val ) ? val.getSourceArray : val;
-    let mapStore = {  }
-    that.__mapstore.forEach( storekey => {
-        if( that.data.hasOwnProperty(storekey) ) console.error( `page has data key for ${ storekey }` )
-        else if( !store.hasOwnProperty(storekey) ) console.error( `store not find ${storekey}` )
-        else Object.assign( mapStore,{ [storekey]: store[storekey]  } )
-    })
+    that.__mapstorekey = [...new Set(mapstore.concat(globalStore))]
+    const mapStore = getfilterStore.call(that,that.__mapstorekey)
     
     // store 数据不再开放给用户操作
     // page.store = mapStore
@@ -379,8 +387,12 @@ const getMapStore = function(that,mapstore = [],watch = {}){
     that.updateStore = updateStore.bind( 
                                          isComponents ? useStore.currentPage.webview :  
                                          that ); 
+    
+    that.addMapStore = addMapStore.bind( 
+                                        isComponents ? useStore.currentPage.webview :  
+                                        that  );
 
-    _setData.bind(that,{ store:mapStore })()
+    _setData.bind(that,mapStore)()
 
     if( watch && isObject(watch) ){
         watchMap.setWatchPageMap( 

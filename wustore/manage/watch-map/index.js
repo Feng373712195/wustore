@@ -44,9 +44,7 @@ class watchMap {
         
     }
     checkIsWatch(webviewId,dataPath,that,oldVal,newVal){
-
-        console.log( oldVal,'oldVal' , newVal, 'newVal')
-        
+        let _oldVal = oldVal !== '@@@cache oldval@@@' ? (watchOldCache[dataPath] = oldVal) : watchOldCache[dataPath];
         // 检查页面是否有 watch 监听
         if( this.checkHasWatch(webviewId) ){
             if( this.checkIsDeepWatch( webviewId,dataPath,that,oldVal,newVal ) ){ 
@@ -55,7 +53,6 @@ class watchMap {
             }
             const watchs = this.getWatchPageMap( webviewId )
             if( watchs[dataPath] ){
-                let _oldVal = oldVal ? (watchOldCache[dataPath] = oldVal) : oldVal = watchOldCache[dataPath];
                 isFunction(watchs[dataPath]) && this.pushTodoWatchHandles( webviewId,watchs[dataPath].bind(that,_oldVal,newVal) );
             }
         }

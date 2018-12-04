@@ -81,7 +81,7 @@ const getDataRoot = function(dataPath){
 
 // 数据observer 观察回调
 const observerCB = function(setdata,key,newval,dataPath){
-
+    
     // 有时setData 会触发到 observerCb 如果是setData执行过程中调用到observerCb 不往下执行
     if( isSetData.is ) return 
     
@@ -95,16 +95,34 @@ const observerCB = function(setdata,key,newval,dataPath){
     const getNewVal = (val)=>{
         return val.getSourceObject ? val.getSourceObject : val.getSourceArray ? val.getSourceArray : val
     }
+
+    const getOldVal = (val)=>{
+        if( val ){
+            return val.getObserverObject ? val.getObserverObject : val.getObserverArray ? val.getObserverArray : val
+        }else{
+            return val
+        }
+    }
+
+    // 判断是否是赋值 自己的值
+    if( getOldVal(setdata[key]) === newval ){
+        if( isObject( getOldVal(setdata[key]) ) ){
+            const diffkey = arrDiff( Object.keys( setdata[key] ),Object.keys( newval ) )
+            if( diffkey.length == 0 ) return 
+            diffkey.forEach( key => {
+                newval.getSourceObject[key] = newval[key]
+                setNewObserver( newval , newval.getSourceObject , observerCB , dataPath, key )
+            })
+        }
+        // console.log( 'set self' )
+    }
+
     // 小程序首页还未开始加载
     if( !useStore.currentPage.id ){ 
         setdata[key] = newval;
         return;
     }
-    setdata[key] = getNewVal(newval);
 
-    //以下为watch与update操作    
-    let cleanUpdate = false;
-    const dataRoot = getDataRoot(dataPath);
     // 设置旧值 用于watch时返回
     let oldVal = null;
     if( isObject(setdata[key]) || isArray(setdata[key]) ){
@@ -114,17 +132,27 @@ const observerCB = function(setdata,key,newval,dataPath){
     }else{
         oldVal = setdata[key]
     }
+
+    // 把源对象 设置新值
+    setdata[key] = getNewVal(newval);
+
+    //以下为watch与update操作    
+    let cleanUpdate = false;
+    const dataRoot = getDataRoot(dataPath);
+
     const upDateNewVal = isObject( setdata ) ? setdata.getObserverObject[key] : setdata.getObserverArray[key]
     const curtPageComponents = useStore.pageComponents[useStore.currentPage.id]
     //页面记录更新
     updateData.setUpdataData( useStore.currentPage.id,dataPath,dataRoot,cleanUpdate,upDateNewVal )
-    watchMap.checkIsWatch( useStore.currentPage.id,dataPath, useStore.currentPage.webview ,oldVal,setdata[key] )
+    watchMap.checkIsWatch( useStore.currentPage.id,dataPath, useStore.currentPage.webview ,oldVal,upDateNewVal )
+
     //页面组件记录更新
     curtPageComponents && curtPageComponents.forEach( component=>{
         const componentId = component.__wxExparserNodeId__
-        updateData.setUpdataData(useStore.currentPage.id,dataPath,dataRoot,cleanUpdate,upDateNewVal,componentId) 
-        watchMap.checkComponentIsWatch( useStore.currentPage.id,dataPath,component,oldVal,setdata[key] ) 
+        updateData.setUpdataData(useStore.currentPage.id,dataPath,dataRoot,cleanUpdate,upDateNewVal,componentId)
+        watchMap.checkComponentIsWatch( useStore.currentPage.id,dataPath,component,oldVal,upDateNewVal ) 
     })
+
 }
  
 // 创建store
@@ -164,30 +192,30 @@ const __observerPageShowHook = function(mapstore){
     const beforeShow = function(mapstore){
 
         // 页面show 重新 useStore.currentPage.id 当前页面 webviewId
-        useStore.currentPage.id = this.data.__webviewId__
         useStore.currentPage.webview = this
-
+        useStore.currentPage.id = this.data.__webviewId__
 
         const updataAndRunWatch = ( that,isComponents ) => {
             const currenPageTodoUpdate = flatObject( isComponents ?
                                                      updateData.getUpdataData( useStore.currentPage.id,that.__wxExparserNodeId__  ) :
                                                      updateData.getUpdataData( useStore.currentPage.id ) )
 
-            
+            const checkIsWatchHandleName = isComponents?'checkComponentIsWatch':'checkIsWatch'
             
             const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
 
             if( todoUpdateKeys.length > 0 ){ 
 
                 todoUpdateKeys.forEach( dataPath => { 
-
-                    watchMap.checkIsWatch(  useStore.currentPage.id ,
-                                            // dataPath.replace('store.',''), 
-                                            dataPath,
-                                            that,
-                                            null,
-                                            currenPageTodoUpdate[dataPath]
-                                        )
+                    
+                    watchMap[checkIsWatchHandleName]( 
+                                                        useStore.currentPage.id ,
+                                                        // dataPath.replace('store.',''), 
+                                                        dataPath,
+                                                        that,
+                                                        '@@@cache oldval@@@',
+                                                        currenPageTodoUpdate[dataPath]
+                                                    )
                 })
                 
                 _setData.bind( that,currenPageTodoUpdate )()
@@ -200,6 +228,7 @@ const __observerPageShowHook = function(mapstore){
 
         updataAndRunWatch( this );
         const currentPageComponent = useStore.pageComponents[useStore.currentPage.id];
+
         currentPageComponent && currentPageComponent.length > 0 && currentPageComponent.forEach( component=>{
             updataAndRunWatch( component,true );
         })
@@ -368,7 +397,6 @@ const getMapStore = function(that,mapstore = [],watch = {}){
 
     // 拥有onShow 与 onUnload 为 page 否则为 组件
     if( that.onShow && that.onUnload ){
-        
         __observerPageShowHook.bind(that,mapstore)()
         __observerWxPageUnloadHook.bind(that)()
         useStore.currentPage.id = that.data.__webviewId__
@@ -376,7 +404,6 @@ const getMapStore = function(that,mapstore = [],watch = {}){
         useStore.pages.push( that )
     }
     else{
-        
         isComponents = true;
         if( !useStore.pageComponents[useStore.currentPage.id] ){
             useStore.pageComponents[useStore.currentPage.id] = []
@@ -402,6 +429,7 @@ const getMapStore = function(that,mapstore = [],watch = {}){
             isComponents ? { component:that, componentFromWebviewId:useStore.currentPage.id } : undefined
         )
     }
+
 }
 
 const appMapStore = function(mapstore){ 

@@ -46,6 +46,7 @@ class watchMap {
     checkIsWatch(webviewId,dataPath,that,oldVal,newVal){
         let _oldVal = oldVal !== '@@@cache oldval@@@' ? (watchOldCache[dataPath] = oldVal) : watchOldCache[dataPath];
         // 检查页面是否有 watch 监听
+        
         if( this.checkHasWatch(webviewId) ){
             if( this.checkIsDeepWatch( webviewId,dataPath,that,oldVal,newVal ) ){ 
                 // 此处是否 return 待参考vue
@@ -59,6 +60,7 @@ class watchMap {
         
     }
     checkComponentIsWatch(webviewId,dataPath,that,oldVal,newVal){
+        let _oldVal = oldVal !== '@@@cache oldval@@@' ? (watchOldCache[dataPath] = oldVal) : watchOldCache[dataPath];
 
         // 检查页面组件是否有 watch 监听
         const componentId = that.__wxExparserNodeId__
@@ -103,8 +105,11 @@ class watchMap {
     }
     runWatchHandles(webviewId){
        const watchs = this.watchHandles.get(webviewId)
-       watchs && watchs.length > 0 && watchs.forEach( fn=>fn() );
-       this.crealTodoWatchHandles(webviewId)
+       if( watchs && watchs.length > 0 ){
+            const _watchs =  watchs.concat()
+            this.crealTodoWatchHandles(webviewId)
+            _watchs.forEach( fn=>fn() );
+       }
     }
     runComponentsWatch(webviewId){
         const pageComponentWatchs = this.componentWatchs.get( webviewId )
@@ -121,6 +126,7 @@ class watchMap {
         this.watchHandles.get(webviewId).push( handle ) 
     }
     crealTodoWatchHandles(webviewId){
+        console.log( 'crealTodoWatchHandles' )
         this.watchHandles.set(webviewId,[]);
     }
     clearComponentsTodoWatchHandles(watch){

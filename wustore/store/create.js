@@ -17,6 +17,9 @@ let todoGlobaUpadte = {};
 
 let isUpdate = false;
 
+// 是否执行watch
+let isWatch = true;
+
 // wcstore dataPath 规则  
 // store.对象属性 true  store[‘对象属性’] false   
 // store[数组索引] true  store.数组索引 false
@@ -81,7 +84,6 @@ const getDataRoot = function(dataPath){
 
 // 数据observer 观察回调
 const observerCB = function(setdata,key,newval,dataPath){
-    
     // 有时setData 会触发到 observerCb 如果是setData执行过程中调用到observerCb 不往下执行
     if( isSetData.is ) return 
     
@@ -91,6 +93,7 @@ const observerCB = function(setdata,key,newval,dataPath){
         return;
     } 
 
+    
     // 防止赋 已经可以监听的值
     const getNewVal = (val)=>{
         return val.getSourceObject ? val.getSourceObject : val.getSourceArray ? val.getSourceArray : val
@@ -144,13 +147,13 @@ const observerCB = function(setdata,key,newval,dataPath){
     const curtPageComponents = useStore.pageComponents[useStore.currentPage.id]
     //页面记录更新
     updateData.setUpdataData( useStore.currentPage.id,dataPath,dataRoot,cleanUpdate,upDateNewVal )
-    watchMap.checkIsWatch( useStore.currentPage.id,dataPath, useStore.currentPage.webview ,oldVal,upDateNewVal )
+    isWatch && watchMap.checkIsWatch( useStore.currentPage.id,dataPath, useStore.currentPage.webview ,oldVal,upDateNewVal )
 
     //页面组件记录更新
     curtPageComponents && curtPageComponents.forEach( component=>{
         const componentId = component.__wxExparserNodeId__
         updateData.setUpdataData(useStore.currentPage.id,dataPath,dataRoot,cleanUpdate,upDateNewVal,componentId)
-        watchMap.checkComponentIsWatch( useStore.currentPage.id,dataPath,component,oldVal,upDateNewVal ) 
+        isWatch && watchMap.checkComponentIsWatch( useStore.currentPage.id,dataPath,component,oldVal,upDateNewVal ) 
     })
 
 }
@@ -196,27 +199,27 @@ const __observerPageShowHook = function(mapstore){
         useStore.currentPage.id = this.data.__webviewId__
 
         const updataAndRunWatch = ( that,isComponents ) => {
+            
             const currenPageTodoUpdate = flatObject( isComponents ?
                                                      updateData.getUpdataData( useStore.currentPage.id,that.__wxExparserNodeId__  ) :
                                                      updateData.getUpdataData( useStore.currentPage.id ) )
-
-            const checkIsWatchHandleName = isComponents?'checkComponentIsWatch':'checkIsWatch'
+            // console.log('--- beforeShow currenPageTodoUpdate  ---',currenPageTodoUpdate)
+            // const checkIsWatchHandleName = isComponents?'checkComponentIsWatch':'checkIsWatch'
             
             const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
 
             if( todoUpdateKeys.length > 0 ){ 
 
-                todoUpdateKeys.forEach( dataPath => { 
-                    
-                    watchMap[checkIsWatchHandleName]( 
-                                                        useStore.currentPage.id ,
-                                                        // dataPath.replace('store.',''), 
-                                                        dataPath,
-                                                        that,
-                                                        '@@@cache oldval@@@',
-                                                        currenPageTodoUpdate[dataPath]
-                                                    )
-                })
+                // todoUpdateKeys.forEach( dataPath => { 
+                //     watchMap[checkIsWatchHandleName]( 
+                //                                         useStore.currentPage.id ,
+                //                                         // dataPath.replace('store.',''), 
+                //                                         dataPath,
+                //                                         that,
+                //                                         '@@@cache oldval@@@',
+                //                                         currenPageTodoUpdate[dataPath]
+                //                                     )
+                // })
                 
                 _setData.bind( that,currenPageTodoUpdate )()
                 // 页面 runWatchHandles
@@ -275,7 +278,8 @@ const __observerWxPageUnloadHook =  function(){
 }
 
 // store 页面更新函数
-const updateStore = function(update){
+const updateStore = function(update,option = {}){
+    const { nowatch } = option
 
     isUpdate = true
 
@@ -287,7 +291,10 @@ const updateStore = function(update){
 
     const that = this;
 
+    nowatch && (isWatch = false)
+
     if( update && isObject(update) ){
+
         Object.keys( update ).forEach( dataPath => {
             strTransformPath( store,dataPath,function(point,key,points,keys){
                 if( that ){
@@ -312,12 +319,14 @@ const updateStore = function(update){
                                     dataPath.replace( replacelastPropReg ,'' ), 
                                     key )
                 }
-                 
                 point[key] = update[dataPath];
                 
             })
         })
+        
     }
+
+   
 
     if( !that ){
         isUpdate = false
@@ -334,18 +343,51 @@ const updateStore = function(update){
         return;
     }
     
+
     // 当前页面的toUpdate 存入其他使用页面 todoUpdate中 会在页面onSHOW时执行 update
     useStore.pages.forEach((page)=>{
         if( page.data.__webviewId__ !== useStore.currentPage.id ){
             // 页面的待更新
-            updateData.todoUpdateData( page, currenPageTodoUpdate )
+            updateData.todoUpdateData( page, currenPageTodoUpdate  )
+            if( isWatch ){
+                const currenPageTodoUpdate = flatObject( updateData.getUpdataData( useStore.currentPage.id ) )
+                const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
+                todoUpdateKeys.forEach( dataPath => { 
+                    watchMap['checkIsWatch']( 
+                                                page.data.__webviewId__, 
+                                                // dataPath.replace('store.',''), 
+                                                dataPath,
+                                                page,
+                                                '@@@cache oldval@@@',
+                                                currenPageTodoUpdate[dataPath]
+                                            )
+                })
+            }
             // 页面的组件待更新
             const pageComponent = useStore.pageComponents[page.data.__webviewId__]
             pageComponent && pageComponent.length > 0 && pageComponent.forEach(component => { 
                 updateData.todoUpdateData( page, currenPageTodoUpdate , true , component )
+                if( isWatch ){
+                    const currenPageTodoUpdate = flatObject( updateData.getUpdataData( useStore.currentPage.id,component.__wxExparserNodeId__  )  )
+                    const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
+                    todoUpdateKeys.forEach( dataPath => { 
+                        watchMap['checkComponentIsWatch']( 
+                                                            page.data.__webviewId__, 
+                                                            // dataPath.replace('store.',''), 
+                                                            dataPath,
+                                                            component,
+                                                            '@@@cache oldval@@@',
+                                                            currenPageTodoUpdate[dataPath]
+                                                        )
+                    }) 
+                }  
             })
         }
     })
+
+   
+
+    isWatch = true
 
     // 当前页面更新
     _setData.bind( that,flatObject( currenPageTodoUpdate ) )()
@@ -360,6 +402,8 @@ const updateStore = function(update){
     watchMap.runWatchHandles( useStore.currentPage.id )
     // 页面组件 运行watch runWatchHandles
     watchMap.runComponentsWatch( useStore.currentPage.id )
+
+   
 
     isUpdate = false
 }
@@ -437,11 +481,11 @@ const appMapStore = function(mapstore){
     globalStore = mapstore
 }
 
-const appUpdateStore = function(update){ 
+const appUpdateStore = function(update,option = {}){ 
     // 还未有 useStore.currentPage.id 说明 小程序page首页onShow还未完成
     updateStore.bind( useStore.currentPage.id ?
                       useStore.currentPage.webview : 
-                      null )(update)
+                      null )(update,option)
 }
 
 export { 

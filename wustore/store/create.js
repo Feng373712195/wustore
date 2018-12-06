@@ -191,8 +191,15 @@ const setStoreProp = function(storeDataPath,setkey,val){
 const __observerPageShowHook = function(mapstore){
     
     const onshow = this.onShow
+    let beforeShowEventCount = 0;
 
     const beforeShow = function(mapstore){
+        
+        if( beforeShowEventCount >= 1 ){
+            return;
+        }
+
+        ++beforeShowEventCount
 
         // 页面show 重新 useStore.currentPage.id 当前页面 webviewId
         useStore.currentPage.webview = this
@@ -238,6 +245,8 @@ const __observerPageShowHook = function(mapstore){
 
         // clear 当前页和组件 uodate
         updateData.clearUpdateData( useStore.currentPage.id )
+
+        setTimeout(()=>{ beforeShowEventCount = 0; console.log('timer') })
     }
 
     Object.defineProperty(this,'onShow',{
@@ -245,7 +254,15 @@ const __observerPageShowHook = function(mapstore){
             return this.__onshow ? this.__onshow : onshow
         },
         set(newval){   
-            this.__onshow = function(...arg){ [ beforeShow.bind(this,mapstore),newval.bind(this,...arg) ].map( fn=>fn() )  }
+            this.__onshow = function(...arg){ 
+                    let setNewShow = null;
+                    [beforeShow.bind(this,mapstore),newval.bind(this,...arg)]
+                    .map((fn,index)=>{  
+                        if(index == 0) beforeShowEventCount == 0 && fn()
+                        else{ setNewShow = fn }
+                    })
+                    setNewShow()
+                }
         }
     })
 
@@ -255,8 +272,16 @@ const __observerPageShowHook = function(mapstore){
 // 防止框架之外的逻辑重写onUnload
 const __observerWxPageUnloadHook =  function(){
     const onunload = this.onUnload
+    let beforeUnloadEventCount = 0;
     
     const beforeUnload = function(){
+
+        if( beforeUnloadEventCount >= 1 ){
+            return;
+        }
+        
+        ++beforeUnloadEventCount
+
         // 执行过unload的页面 从 useStore.pages 中移除 
         const pageIndex = useStore.pages.indexOf(this)
         // 未对组件 removeWatchPageMap
@@ -264,6 +289,8 @@ const __observerWxPageUnloadHook =  function(){
         // 未对组件 removeUpdateData
         updateData.removeUpdateData( useStore.pages[pageIndex].data.__webviewId__ )
         useStore.pages.splice( pageIndex,1 );
+
+        setTimeout(()=>{ beforeUnloadEventCount = 0 })
     };
 
     Object.defineProperty(this,'onUnload',{
@@ -271,7 +298,15 @@ const __observerWxPageUnloadHook =  function(){
             return this.__onunload ? this.__onunload : onunload
         },
         set(newval){
-            this.__onunload = function(...arg){ [ beforeUnload.bind(this),newval.bind(this,...arg) ].map( fn=>fn() )  }
+            this.__onunload = function(...arg){ 
+                let setNewUnload = null;
+                [beforeUnload.bind(this),newval.bind(this,...arg)]
+                .map((fn,index)=>{  
+                    if(index == 0) beforeUnloadEventCount == 0 && fn()
+                    else{ setNewUnload = fn }
+                })
+                setNewUnload()  
+            }
         }
     })
     this.onUnload = onunload;
@@ -325,8 +360,6 @@ const updateStore = function(update,option = {}){
         })
         
     }
-
-   
 
     if( !that ){
         isUpdate = false
@@ -455,13 +488,9 @@ const getMapStore = function(that,mapstore = [],watch = {}){
         useStore.pageComponents[useStore.currentPage.id].push( that )
     }
  
-    that.updateStore = updateStore.bind( 
-                                         isComponents ? useStore.currentPage.webview :  
-                                         that ); 
+    that.updateStore = updateStore.bind( that ); 
     
-    that.addMapStore = addMapStore.bind( 
-                                        isComponents ? useStore.currentPage.webview :  
-                                        that  );
+    that.addMapStore = addMapStore.bind( that );
 
     _setData.bind(that,mapStore)()
 

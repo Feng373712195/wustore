@@ -67,7 +67,7 @@ const strTransformPath = function( _store,str,cb){
 
 // 寻找webview对象
 const findWebview = function(webviewid){
-    return useStore.pages.find( page => page.data.__webviewId__ === webviewid )
+    return useStore.pages.find( page => page.__wxExparserNodeId__ === webviewid )
 }
 
 // wcstore setData
@@ -203,7 +203,7 @@ const __observerPageShowHook = function(mapstore){
 
         // 页面show 重新 useStore.currentPage.id 当前页面 webviewId
         useStore.currentPage.webview = this
-        useStore.currentPage.id = this.data.__webviewId__
+        useStore.currentPage.id = this.__wxExparserNodeId__
 
         const updataAndRunWatch = ( that,isComponents ) => {
             
@@ -246,7 +246,7 @@ const __observerPageShowHook = function(mapstore){
         // clear 当前页和组件 uodate
         updateData.clearUpdateData( useStore.currentPage.id )
 
-        setTimeout(()=>{ beforeShowEventCount = 0; console.log('timer') })
+        setTimeout(()=>{ beforeShowEventCount = 0; })
     }
 
     Object.defineProperty(this,'onShow',{
@@ -278,16 +278,16 @@ const __observerWxPageUnloadHook =  function(){
 
         if( beforeUnloadEventCount >= 1 ){
             return;
-        }
+        }    
         
         ++beforeUnloadEventCount
 
         // 执行过unload的页面 从 useStore.pages 中移除 
         const pageIndex = useStore.pages.indexOf(this)
         // 未对组件 removeWatchPageMap
-        watchMap.removeWatchPageMap( useStore.pages[pageIndex].data.__webviewId__ )
+        watchMap.removeWatchPageMap( useStore.pages[pageIndex].__wxExparserNodeId__ )
         // 未对组件 removeUpdateData
-        updateData.removeUpdateData( useStore.pages[pageIndex].data.__webviewId__ )
+        updateData.removeUpdateData( useStore.pages[pageIndex].__wxExparserNodeId__ )
         useStore.pages.splice( pageIndex,1 );
 
         setTimeout(()=>{ beforeUnloadEventCount = 0 })
@@ -315,6 +315,8 @@ const __observerWxPageUnloadHook =  function(){
 // store 页面更新函数
 const updateStore = function(update,option = {}){
     const { nowatch } = option
+
+    console.log('updateStore',update,'that',this)
 
     isUpdate = true
 
@@ -379,7 +381,7 @@ const updateStore = function(update,option = {}){
 
     // 当前页面的toUpdate 存入其他使用页面 todoUpdate中 会在页面onSHOW时执行 update
     useStore.pages.forEach((page)=>{
-        if( page.data.__webviewId__ !== useStore.currentPage.id ){
+        if( page.__wxExparserNodeId__ !== useStore.currentPage.id ){
             // 页面的待更新
             updateData.todoUpdateData( page, currenPageTodoUpdate  )
             if( isWatch ){
@@ -387,7 +389,7 @@ const updateStore = function(update,option = {}){
                 const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
                 todoUpdateKeys.forEach( dataPath => { 
                     watchMap['checkIsWatch']( 
-                                                page.data.__webviewId__, 
+                                                page.__wxExparserNodeId__, 
                                                 // dataPath.replace('store.',''), 
                                                 dataPath,
                                                 page,
@@ -397,7 +399,7 @@ const updateStore = function(update,option = {}){
                 })
             }
             // 页面的组件待更新
-            const pageComponent = useStore.pageComponents[page.data.__webviewId__]
+            const pageComponent = useStore.pageComponents[page.__wxExparserNodeId__]
             pageComponent && pageComponent.length > 0 && pageComponent.forEach(component => { 
                 updateData.todoUpdateData( page, currenPageTodoUpdate , true , component )
                 if( isWatch ){
@@ -405,7 +407,7 @@ const updateStore = function(update,option = {}){
                     const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
                     todoUpdateKeys.forEach( dataPath => { 
                         watchMap['checkComponentIsWatch']( 
-                                                            page.data.__webviewId__, 
+                                                            page.__wxExparserNodeId__, 
                                                             // dataPath.replace('store.',''), 
                                                             dataPath,
                                                             component,
@@ -476,7 +478,7 @@ const getMapStore = function(that,mapstore = [],watch = {}){
     if( that.onShow && that.onUnload ){
         __observerPageShowHook.bind(that,mapstore)()
         __observerWxPageUnloadHook.bind(that)()
-        useStore.currentPage.id = that.data.__webviewId__
+        useStore.currentPage.id = that.__wxExparserNodeId__
         useStore.currentPage.webview = that
         useStore.pages.push( that )
     }
@@ -488,15 +490,19 @@ const getMapStore = function(that,mapstore = [],watch = {}){
         useStore.pageComponents[useStore.currentPage.id].push( that )
     }
  
-    that.updateStore = updateStore.bind( that ); 
+    that.updateStore = updateStore.bind( 
+                                         isComponents ? useStore.currentPage.webview :  
+                                         that ); 
     
-    that.addMapStore = addMapStore.bind( that );
+    that.addMapStore = addMapStore.bind( 
+                                        isComponents ? useStore.currentPage.webview :  
+                                        that  );
 
     _setData.bind(that,mapStore)()
 
     if( watch && isObject(watch) ){
         watchMap.setWatchPageMap( 
-            isComponents ? that.__wxExparserNodeId__ : that.data.__webviewId__ ,
+            isComponents ? that.__wxExparserNodeId__ : that.__wxExparserNodeId__ ,
             watch,
             isComponents,
             isComponents ? { component:that, componentFromWebviewId:useStore.currentPage.id } : undefined

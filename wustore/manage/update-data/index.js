@@ -6,7 +6,7 @@ class UpdateData{
     }
     // 页面todoUpdate
     todoUpdateData(webview,todo,isComponent,component){
-        const updateWebvieId = webview.data.__webviewId__
+        const updateWebvieId = webview.__wxExparserNodeId__
 
         let todoUpdate = isComponent ? 
                          this.getUpdataData(updateWebvieId, component.__wxExparserNodeId__) :

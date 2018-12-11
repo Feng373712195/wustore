@@ -6,7 +6,7 @@ class UpdateData{
     }
     // 页面todoUpdate
     todoUpdateData(webview,todo,isComponent,component){
-        const updateWebvieId = webview.__wxExparserNodeId__
+        const updateWebvieId = webview.__webviewId
 
         let todoUpdate = isComponent ? 
                          this.getUpdataData(updateWebvieId, component.__wxExparserNodeId__) :
@@ -59,6 +59,7 @@ class UpdateData{
         }
     }
     setUpdataData(webviewId,dataPath,dataRoot,clean,newval,nodeId){
+        console.log( 'setUpdataData' )
 
         const todoUpdate = nodeId ? 
                            this.getUpdataData( webviewId,nodeId ) :
@@ -69,15 +70,12 @@ class UpdateData{
             // 修改了引用类型 对之前对这个引用类型的值更新清楚 
             if(clean){
                 Object.keys(todoUpdate[dataRoot]).forEach(key => {
-                    // new RegExp(`^store.${dataPath}`).test(key) && delete todoUpdate[dataRoot][key]
-                    new RegExp(`^${dataPath}`).test(key) && delete todoUpdate[dataRoot][key]
+                    new RegExp(`^store.${dataPath}`).test(key) && delete todoUpdate[dataRoot][key]
                 })
             }
-            // Object.assign( todoUpdate[dataRoot],{ [`store.${dataPath}`]:newval } )
-            Object.assign( todoUpdate[dataRoot],{ [`${dataPath}`]:newval } )
+            Object.assign( todoUpdate[dataRoot],{ [`store.${dataPath}`]:newval } )
         }else{
-            // todoUpdate[dataRoot] = { [`store.${dataPath}`]:newval }
-            todoUpdate[dataRoot] = { [`${dataPath}`]:newval }
+            todoUpdate[dataRoot] = { [`store.${dataPath}`]:newval }
         }
     }
     removeUpdateData(webviewId){

@@ -20,6 +20,9 @@ let isUpdate = false;
 // 是否执行watch
 let isWatch = true;
 
+// webviewId 
+let webviewId = 0;
+
 // wcstore dataPath 规则  
 // store.对象属性 true  store[‘对象属性’] false   
 // store[数组索引] true  store.数组索引 false
@@ -67,7 +70,7 @@ const strTransformPath = function( _store,str,cb){
 
 // 寻找webview对象
 const findWebview = function(webviewid){
-    return useStore.pages.find( page => page.__wxExparserNodeId__ === webviewid )
+    return useStore.pages.find( page => page.__webviewId === webviewid )
 }
 
 // wcstore setData
@@ -84,6 +87,8 @@ const getDataRoot = function(dataPath){
 
 // 数据observer 观察回调
 const observerCB = function(setdata,key,newval,dataPath){
+    console.log('observerCB',useStore.currentPage.id)    
+
     // 有时setData 会触发到 observerCb 如果是setData执行过程中调用到observerCb 不往下执行
     if( isSetData.is ) return 
     
@@ -92,7 +97,6 @@ const observerCB = function(setdata,key,newval,dataPath){
         setdata[key] = newval
         return;
     } 
-
     
     // 防止赋 已经可以监听的值
     const getNewVal = (val)=>{
@@ -117,11 +121,11 @@ const observerCB = function(setdata,key,newval,dataPath){
                 setNewObserver( newval , newval.getSourceObject , observerCB , dataPath, key )
             })
         }
-        // console.log( 'set self' )
+        // 
     }
 
     // 小程序首页还未开始加载
-    if( !useStore.currentPage.id ){ 
+    if(  useStore.currentPage.id === undefined || useStore.currentPage.id === null ){ 
         setdata[key] = newval;
         return;
     }
@@ -145,6 +149,7 @@ const observerCB = function(setdata,key,newval,dataPath){
 
     const upDateNewVal = isObject( setdata ) ? setdata.getObserverObject[key] : setdata.getObserverArray[key]
     const curtPageComponents = useStore.pageComponents[useStore.currentPage.id]
+    
     //页面记录更新
     updateData.setUpdataData( useStore.currentPage.id,dataPath,dataRoot,cleanUpdate,upDateNewVal )
     isWatch && watchMap.checkIsWatch( useStore.currentPage.id,dataPath, useStore.currentPage.webview ,oldVal,upDateNewVal )
@@ -203,14 +208,15 @@ const __observerPageShowHook = function(mapstore){
 
         // 页面show 重新 useStore.currentPage.id 当前页面 webviewId
         useStore.currentPage.webview = this
-        useStore.currentPage.id = this.__wxExparserNodeId__
+        useStore.currentPage.id = this.__webviewId
 
         const updataAndRunWatch = ( that,isComponents ) => {
             
             const currenPageTodoUpdate = flatObject( isComponents ?
                                                      updateData.getUpdataData( useStore.currentPage.id,that.__wxExparserNodeId__  ) :
                                                      updateData.getUpdataData( useStore.currentPage.id ) )
-            // console.log('--- beforeShow currenPageTodoUpdate  ---',currenPageTodoUpdate)
+
+
             // const checkIsWatchHandleName = isComponents?'checkComponentIsWatch':'checkIsWatch'
             
             const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
@@ -285,9 +291,9 @@ const __observerWxPageUnloadHook =  function(){
         // 执行过unload的页面 从 useStore.pages 中移除 
         const pageIndex = useStore.pages.indexOf(this)
         // 未对组件 removeWatchPageMap
-        watchMap.removeWatchPageMap( useStore.pages[pageIndex].__wxExparserNodeId__ )
+        watchMap.removeWatchPageMap( useStore.pages[pageIndex].__webviewId )
         // 未对组件 removeUpdateData
-        updateData.removeUpdateData( useStore.pages[pageIndex].__wxExparserNodeId__ )
+        updateData.removeUpdateData( useStore.pages[pageIndex].__webviewId  )
         useStore.pages.splice( pageIndex,1 );
 
         setTimeout(()=>{ beforeUnloadEventCount = 0 })
@@ -314,9 +320,9 @@ const __observerWxPageUnloadHook =  function(){
 
 // store 页面更新函数
 const updateStore = function(update,option = {}){
-    const { nowatch } = option
 
-    console.log('updateStore',update,'that',this)
+
+    const { nowatch } = option
 
     isUpdate = true
 
@@ -345,6 +351,8 @@ const updateStore = function(update,option = {}){
                 if( update[dataPath] === undefined ) return 
                 const hasProp = point.hasOwnProperty(key);
 
+                console.log(hasProp,'hasProp')
+
                 if( !hasProp ){
                     // 对新的属性的监听
                     const replacelastPropReg = /\[\d+\]|\.\w+$/
@@ -360,7 +368,7 @@ const updateStore = function(update,option = {}){
                 
             })
         })
-        
+     
     }
 
     if( !that ){
@@ -369,6 +377,9 @@ const updateStore = function(update,option = {}){
     }
 
     const currenPageTodoUpdate = updateData.getUpdataData(useStore.currentPage.id);
+
+    console.log( currenPageTodoUpdate,'--- currenPageTodoUpdate ---' )
+
     const currentPageComponent = useStore.pageComponents[useStore.currentPage.id];
     const pageComponentsTodoUpdate =  updateData.pageComponentsUpdateMap.get(useStore.currentPage.id)
 
@@ -381,7 +392,7 @@ const updateStore = function(update,option = {}){
 
     // 当前页面的toUpdate 存入其他使用页面 todoUpdate中 会在页面onSHOW时执行 update
     useStore.pages.forEach((page)=>{
-        if( page.__wxExparserNodeId__ !== useStore.currentPage.id ){
+        if( page.__webviewId !== useStore.currentPage.id ){
             // 页面的待更新
             updateData.todoUpdateData( page, currenPageTodoUpdate  )
             if( isWatch ){
@@ -389,7 +400,7 @@ const updateStore = function(update,option = {}){
                 const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
                 todoUpdateKeys.forEach( dataPath => { 
                     watchMap['checkIsWatch']( 
-                                                page.__wxExparserNodeId__, 
+                                                page.__webviewId, 
                                                 // dataPath.replace('store.',''), 
                                                 dataPath,
                                                 page,
@@ -399,7 +410,7 @@ const updateStore = function(update,option = {}){
                 })
             }
             // 页面的组件待更新
-            const pageComponent = useStore.pageComponents[page.__wxExparserNodeId__]
+            const pageComponent = useStore.pageComponents[page.__webviewId]
             pageComponent && pageComponent.length > 0 && pageComponent.forEach(component => { 
                 updateData.todoUpdateData( page, currenPageTodoUpdate , true , component )
                 if( isWatch ){
@@ -407,7 +418,7 @@ const updateStore = function(update,option = {}){
                     const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
                     todoUpdateKeys.forEach( dataPath => { 
                         watchMap['checkComponentIsWatch']( 
-                                                            page.__wxExparserNodeId__, 
+                                                            page.__webviewId, 
                                                             // dataPath.replace('store.',''), 
                                                             dataPath,
                                                             component,
@@ -419,8 +430,6 @@ const updateStore = function(update,option = {}){
             })
         }
     })
-
-   
 
     isWatch = true
 
@@ -437,8 +446,6 @@ const updateStore = function(update,option = {}){
     watchMap.runWatchHandles( useStore.currentPage.id )
     // 页面组件 运行watch runWatchHandles
     watchMap.runComponentsWatch( useStore.currentPage.id )
-
-   
 
     isUpdate = false
 }
@@ -460,7 +467,7 @@ const addMapStore = function(addMapStoreKey){
     }
     const diffMapStoreKey = arrDiff( this.__mapstorekey,addMapStoreKey )
     this.__mapstorekey = this.__mapstorekey.concat(diffMapStoreKey)
-    _setData.bind(this, getfilterStore.call(this,diffMapStoreKey) )()
+    _setData.bind(this, Object.assign( this.data.store,{ store:getfilterStore.call(this,diffMapStoreKey) } ) )()
 }
 
 const getMapStore = function(that,mapstore = [],watch = {}){
@@ -478,8 +485,12 @@ const getMapStore = function(that,mapstore = [],watch = {}){
     if( that.onShow && that.onUnload ){
         __observerPageShowHook.bind(that,mapstore)()
         __observerWxPageUnloadHook.bind(that)()
-        useStore.currentPage.id = that.__wxExparserNodeId__
+        // useStore.currentPage.id = that.__wxExparserNodeId__
+        useStore.currentPage.id = webviewId
         useStore.currentPage.webview = that
+        that.__webviewId = webviewId
+        webviewId++
+
         useStore.pages.push( that )
     }
     else{
@@ -490,19 +501,15 @@ const getMapStore = function(that,mapstore = [],watch = {}){
         useStore.pageComponents[useStore.currentPage.id].push( that )
     }
  
-    that.updateStore = updateStore.bind( 
-                                         isComponents ? useStore.currentPage.webview :  
-                                         that ); 
+    that.updateStore = updateStore.bind( that ); 
     
-    that.addMapStore = addMapStore.bind( 
-                                        isComponents ? useStore.currentPage.webview :  
-                                        that  );
+    that.addMapStore = addMapStore.bind( that  );
 
-    _setData.bind(that,mapStore)()
+    _setData.bind(that,{ store:mapStore })()
 
     if( watch && isObject(watch) ){
         watchMap.setWatchPageMap( 
-            isComponents ? that.__wxExparserNodeId__ : that.__wxExparserNodeId__ ,
+            isComponents ? that.__wxExparserNodeId__ : that.__webviewId ,
             watch,
             isComponents,
             isComponents ? { component:that, componentFromWebviewId:useStore.currentPage.id } : undefined
@@ -530,54 +537,3 @@ export {
     appUpdateStore,
     setStoreProp
 };
-
-// Object.keys(page.watch).forEach((dataPath)=>{
-    // strTransformPath(store,dataPath,(point,key,points,keys)=>{ 
-    //     let watchPath = '' 
-    //     
-    //     
-    //     keys.forEach( (key,index) => {
-    //         ''
-    //         if( isArray(points[index]) ){ watchPath += `[${key}]` } 
-    //         else if( isObject(points[index]) ){ watchPath += `${index == 0 ? '': '.'}${key}` }
-    //     })
-    // })
-// })
-
-// 可以监听到数组的执行方法
-// store.a.push('111')
-// store.a.splice(0,1)
-// store.a.pop()
-// store.a.unshift('111') 
-// store.a.reverse()
-// store.a.shift()
-
-// push 数组新增之后也可以监听最新索引
-// store.a.push('111')
-// store.a[3] = '222'
-
-
-// unshift 数组新增之后也可以监听最新索引
-// store.a.unshift('111')
-// store.a[0] = '222'
-
-
-// 嵌套的属性也可以监听的到
-// store.b.two[1][2] = '111'
-// store.b.one.subObj.test1 = '1111'
-
-// 普通类型重新赋值为引用类型可以进行监听
-
-// 对象中的
-// store.c = { a:'1',b:'2' }
-
-// store.c.a = 111
-
-// store.c = [1,2,3]
-
-// store.c[0] = 'aaa'
-
-//数组中的
-// store.a[0] = [1,2,3]
-// store.a[0] = { a:'1',b:'2' }
-// store.a[0].a = '111'

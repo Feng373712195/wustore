@@ -2,7 +2,7 @@ export default {
     pages:[],
     pageComponents:{  },
     currentPage:{
-        id:'',
+        id:null,
         webview:null,
     }
 }

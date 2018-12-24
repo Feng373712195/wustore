@@ -87,8 +87,6 @@ const getDataRoot = function(dataPath){
 
 // 数据observer 观察回调
 const observerCB = function(setdata,key,newval,dataPath){
-    console.log('observerCB',useStore.currentPage.id)    
-
     // 有时setData 会触发到 observerCb 如果是setData执行过程中调用到observerCb 不往下执行
     if( isSetData.is ) return 
     
@@ -97,6 +95,7 @@ const observerCB = function(setdata,key,newval,dataPath){
         setdata[key] = newval
         return;
     } 
+
     
     // 防止赋 已经可以监听的值
     const getNewVal = (val)=>{
@@ -125,7 +124,7 @@ const observerCB = function(setdata,key,newval,dataPath){
     }
 
     // 小程序首页还未开始加载
-    if(  useStore.currentPage.id === undefined || useStore.currentPage.id === null ){ 
+    if( useStore.currentPage.id === undefined || useStore.currentPage.id === null  ){ 
         setdata[key] = newval;
         return;
     }
@@ -149,7 +148,6 @@ const observerCB = function(setdata,key,newval,dataPath){
 
     const upDateNewVal = isObject( setdata ) ? setdata.getObserverObject[key] : setdata.getObserverArray[key]
     const curtPageComponents = useStore.pageComponents[useStore.currentPage.id]
-    
     //页面记录更新
     updateData.setUpdataData( useStore.currentPage.id,dataPath,dataRoot,cleanUpdate,upDateNewVal )
     isWatch && watchMap.checkIsWatch( useStore.currentPage.id,dataPath, useStore.currentPage.webview ,oldVal,upDateNewVal )
@@ -199,6 +197,9 @@ const __observerPageShowHook = function(mapstore){
     let beforeShowEventCount = 0;
 
     const beforeShow = function(mapstore){
+
+        // 为了fundebug 加的 console
+        console.log( 'beforeShow',this )
         
         if( beforeShowEventCount >= 1 ){
             return;
@@ -215,8 +216,7 @@ const __observerPageShowHook = function(mapstore){
             const currenPageTodoUpdate = flatObject( isComponents ?
                                                      updateData.getUpdataData( useStore.currentPage.id,that.__wxExparserNodeId__  ) :
                                                      updateData.getUpdataData( useStore.currentPage.id ) )
-
-
+            // 
             // const checkIsWatchHandleName = isComponents?'checkComponentIsWatch':'checkIsWatch'
             
             const todoUpdateKeys = Object.keys(currenPageTodoUpdate)
@@ -253,6 +253,7 @@ const __observerPageShowHook = function(mapstore){
         updateData.clearUpdateData( useStore.currentPage.id )
 
         setTimeout(()=>{ beforeShowEventCount = 0; })
+
     }
 
     Object.defineProperty(this,'onShow',{
@@ -281,6 +282,9 @@ const __observerWxPageUnloadHook =  function(){
     let beforeUnloadEventCount = 0;
     
     const beforeUnload = function(){
+
+        // 为了fundebug 加的 console
+        console.log( 'beforeUnload',this )
 
         if( beforeUnloadEventCount >= 1 ){
             return;
@@ -316,11 +320,10 @@ const __observerWxPageUnloadHook =  function(){
         }
     })
     this.onUnload = onunload;
-}
+} 
 
 // store 页面更新函数
-const updateStore = function(update,option = {}){
-
+const updateStore = function(update,option = {}){ 
 
     const { nowatch } = option
 
@@ -340,7 +343,8 @@ const updateStore = function(update,option = {}){
 
         Object.keys( update ).forEach( dataPath => {
             strTransformPath( store,dataPath,function(point,key,points,keys){
-                if( that ){
+                //option 有__globalUpdate参数时 不检查mapstoreKey
+                if( that && !option.__globalUpdate ){
                     const dataRoot = getDataRoot(dataPath);
                     if( that.__mapstorekey.indexOf( dataRoot ) === -1 ){
                         console.error(`no mapstore for ${ dataRoot }`)
@@ -350,8 +354,6 @@ const updateStore = function(update,option = {}){
                 
                 if( update[dataPath] === undefined ) return 
                 const hasProp = point.hasOwnProperty(key);
-
-                console.log(hasProp,'hasProp')
 
                 if( !hasProp ){
                     // 对新的属性的监听
@@ -368,7 +370,7 @@ const updateStore = function(update,option = {}){
                 
             })
         })
-     
+        
     }
 
     if( !that ){
@@ -377,9 +379,6 @@ const updateStore = function(update,option = {}){
     }
 
     const currenPageTodoUpdate = updateData.getUpdataData(useStore.currentPage.id);
-
-    console.log( currenPageTodoUpdate,'--- currenPageTodoUpdate ---' )
-
     const currentPageComponent = useStore.pageComponents[useStore.currentPage.id];
     const pageComponentsTodoUpdate =  updateData.pageComponentsUpdateMap.get(useStore.currentPage.id)
 
@@ -467,10 +466,11 @@ const addMapStore = function(addMapStoreKey){
     }
     const diffMapStoreKey = arrDiff( this.__mapstorekey,addMapStoreKey )
     this.__mapstorekey = this.__mapstorekey.concat(diffMapStoreKey)
-    _setData.bind(this, Object.assign( this.data.store,{ store:getfilterStore.call(this,diffMapStoreKey) } ) )()
+    _setData.bind(this, getfilterStore.call(this,diffMapStoreKey) )()
 }
 
 const getMapStore = function(that,mapstore = [],watch = {}){
+    if( that._initfinish ) return
 
     let isComponents = false;
     
@@ -485,7 +485,6 @@ const getMapStore = function(that,mapstore = [],watch = {}){
     if( that.onShow && that.onUnload ){
         __observerPageShowHook.bind(that,mapstore)()
         __observerWxPageUnloadHook.bind(that)()
-        // useStore.currentPage.id = that.__wxExparserNodeId__
         useStore.currentPage.id = webviewId
         useStore.currentPage.webview = that
         that.__webviewId = webviewId
@@ -502,10 +501,9 @@ const getMapStore = function(that,mapstore = [],watch = {}){
     }
  
     that.updateStore = updateStore.bind( that ); 
-    
-    that.addMapStore = addMapStore.bind( that  );
+    that.addMapStore = addMapStore.bind( that );
 
-    _setData.bind(that,{ store:mapStore })()
+    _setData.bind(that,mapStore)()
 
     if( watch && isObject(watch) ){
         watchMap.setWatchPageMap( 
@@ -514,8 +512,10 @@ const getMapStore = function(that,mapstore = [],watch = {}){
             isComponents,
             isComponents ? { component:that, componentFromWebviewId:useStore.currentPage.id } : undefined
         )
-    }
+    }   
 
+    //初始化完成标识 毕业一些页面重复调用
+    that._initfinish = true
 }
 
 const appMapStore = function(mapstore){ 
@@ -525,9 +525,9 @@ const appMapStore = function(mapstore){
 
 const appUpdateStore = function(update,option = {}){ 
     // 还未有 useStore.currentPage.id 说明 小程序page首页onShow还未完成
-    updateStore.bind( useStore.currentPage.id ?
+    updateStore.bind( useStore.currentPage.id !== null ?
                       useStore.currentPage.webview : 
-                      null )(update,option)
+                      null )(update,Object.assign({ __globalUpdate:true },option) )
 }
 
 export { 

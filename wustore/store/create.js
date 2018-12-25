@@ -266,7 +266,7 @@ const __observerPageShowHook = function(mapstore){
                     [beforeShow.bind(this,mapstore),newval.bind(this,...arg)]
                     .map((fn,index)=>{  
                         if(index == 0) beforeShowEventCount == 0 && fn()
-                        else{ setNewShow = fn.bind(this,...arg) }
+                        else{ setNewShow = fn }
                     })
                     setNewShow()
                 }
@@ -313,7 +313,7 @@ const __observerWxPageUnloadHook =  function(){
                 [beforeUnload.bind(this),newval.bind(this,...arg)]
                 .map((fn,index)=>{  
                     if(index == 0) beforeUnloadEventCount == 0 && fn()
-                    else{ setNewUnload = fn.bind(this,...arg) }
+                    else{ setNewUnload = fn }
                 })
                 setNewUnload()  
             }

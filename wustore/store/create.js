@@ -74,10 +74,7 @@ const getDataRoot = function( dataPath ) {
 };
 
 // 数据observer 观察回调
-const observerCB = function( setdata, key, newval, oldVal, dataPath ) {
-
-    //缓存上一次变化的值 用于watch时返回
-    oldVals[ dataPath ] = oldVal;
+const observerCB = function( setdata, key, newval, dataPath ) {
 
     // 防止赋 已经可以监听的值
     const getNewVal = ( val ) => {
@@ -91,9 +88,14 @@ const observerCB = function( setdata, key, newval, oldVal, dataPath ) {
     }
 
     let cleanUpdate = false;
+    // 设置旧值 用于watch时返回
+    let oldVal = null;
     if( isObject( setdata[ key ] ) || isArray( setdata[ key ] ) ) {
         // 改变了引用类型的值
+        oldVal = deep( setdata[ key ] );
         cleanUpdate = true;
+    } else {
+        oldVal = setdata[ key ];
     }
 
     // 把源对象 设置新值
@@ -188,7 +190,10 @@ const __observerPageShowHook = function() {
         // clear 当前页和组件 uodate
         updateData.clearUpdateData( useStore.currentPage.id );
 
-        setTimeout( () => { beforeShowEventCount = 0; } );
+        const timer = setTimeout( () => { 
+            beforeShowEventCount = 0; 
+            clearTimeout( timer );
+        } );
 
     };
 
@@ -232,8 +237,11 @@ const __observerWxPageUnloadHook = function() {
         // 未对组件 removeUpdateData
         updateData.removeUpdateData( useStore.pages[ pageIndex ].__webviewId );
         useStore.pages.splice( pageIndex, 1 );
-
-        setTimeout( () => { beforeUnloadEventCount = 0; } );
+        
+        const timer = setTimeout( () => { 
+            beforeUnloadEventCount = 0; 
+            clearTimeout( timer );
+        } );
     };
 
     Object.defineProperty( this, "onUnload", {

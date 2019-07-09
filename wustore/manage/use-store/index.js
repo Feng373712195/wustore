@@ -5,4 +5,4 @@ export default {
         id:null,
         webview:null,
     }
-}
+};

@@ -3,17 +3,17 @@
  * @param data {Object} 要设置的对象
  * @returns data
 */
-const setSourceArray = (data,origin) => {
+const setSourceArray = ( data, origin ) => {
         
-    Object.defineProperty(data,'getSourceArray',{
-        get:function(v){
-            return origin
+    Object.defineProperty( data, "getSourceArray", {
+        get:function( v ) {
+            return origin;
         },
         enumerable : false,
         configurable : true
-    });
+    } );
 
     return origin;
-}
+};
 
-export default setSourceArray
+export default setSourceArray;

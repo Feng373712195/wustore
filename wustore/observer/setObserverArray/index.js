@@ -3,17 +3,17 @@
  * @param data {Object} 要设置的对象
  * @returns data
 */
-const setObserverArray = (data,origin) => {
+const setObserverArray = ( data, origin ) => {
         
-    Object.defineProperty(origin,'getObserverArray',{
-        get:function(v){
-            return data
+    Object.defineProperty( origin, "getObserverArray", {
+        get:function( v ) {
+            return data;
         },
         enumerable : false,
         configurable : true
-    });
+    } );
 
     return data;
-}
+};
 
-export default setObserverArray
+export default setObserverArray;

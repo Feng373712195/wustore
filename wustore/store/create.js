@@ -75,10 +75,7 @@ const getDataRoot = function(dataPath) {
 }
 
 // 数据observer 观察回调
-const observerCB = function(setdata, key, newval, oldVal, dataPath) {
-
-    //缓存上一次变化的值 用于watch时返回
-    oldVals[dataPath] = oldVal
+const observerCB = function(setdata, key, newval, dataPath) {
 
     // 防止赋 已经可以监听的值
     const getNewVal = (val) => {
@@ -92,9 +89,17 @@ const observerCB = function(setdata, key, newval, oldVal, dataPath) {
     }
 
     let cleanUpdate = false;
+    let oldVal = null;
     if (isObject(setdata[key]) || isArray(setdata[key])) {
         // 改变了引用类型的值
+        oldVal = deep( setdata[ key ] );    
+        //缓存上一次变化的值 用于watch时返回
+        oldVals[dataPath] = oldVal;
         cleanUpdate = true;
+    } else {
+        oldVal = setdata[ key ];
+        //缓存上一次变化的值 用于watch时返回
+        oldVals[dataPath] = oldVal;
     }
 
     // 把源对象 设置新值
@@ -200,7 +205,7 @@ const __observerPageShowHook = function() {
         set(newval) {
             this.__onshow = function(...arg) {
                 let setNewShow = null;
-                [beforeShow.bind(this, mapstore), newval.bind(this, ...arg)]
+                [beforeShow.bind(this), newval.bind(this, ...arg)]
                 .map((fn, index) => {
                     if (index == 0) beforeShowEventCount == 0 && fn()
                     else { setNewShow = fn }
@@ -260,7 +265,7 @@ const __observerWxPageUnloadHook = function() {
 }
 
 // store 页面更新函数
-const updateStore = function(update, option = {}) {
+const updateStore = function(update, option = {},) {
 
     const { nowatch } = option
 

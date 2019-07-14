@@ -1,10 +1,10 @@
-import { isObject, isArray, isFunction } from '../../uilt/uilt'
+import { isFunction } from "../../uilt/uilt";
 
-const observer = (setdata, key, newval, dataPath, cb) => {
+const observer = ( setdata, key, newval, dataPath, cb ) => {
 
-    if (setdata[key] === newval) return
+    if( setdata[ key ] === newval ) return;
 
-    isFunction(cb) && cb.apply(null, [setdata, key, newval, dataPath]);
-}
+    isFunction( cb ) && cb.apply( null, [ setdata, key, newval, dataPath ] );
+};
 
-export default observer
+export default observer;

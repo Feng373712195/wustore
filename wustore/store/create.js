@@ -1,6 +1,16 @@
-const { isObject, isArray, flatObject, deep, arrDiff } = require( "../uilt/uilt" );
-import { createObserver } from "../observer/createObserver/index";
-import { setNewObserver } from "../observer/setNewObserver/index";
+const {
+    isObject,
+    isArray,
+    flatObject,
+    deep,
+    arrDiff
+} = require( "../uilt/uilt" );
+import {
+    createObserver
+} from "../observer/createObserver/index";
+import {
+    setNewObserver
+} from "../observer/setNewObserver/index";
 import updateData from "../manage/update-data/index";
 import watchMap from "../manage/watch-map/index";
 import useStore from "../manage/use-store/index";
@@ -23,30 +33,28 @@ let oldVals = {};
 // store[数组索引] true  store.数组索引 false
 
 // 把使用者写的对象路径 转成 wcstore 统一风格 在watch中可以用来判断是否使用了watch
-const strTransformPath = function( _store, str, cb ) {
+const strTransformPath = function ( _store, str, cb ) {
 
     str = str.replace( /^store\./, "" );
     const orgin = _store;
     let points = [ orgin ];
     let keys = [];
 
-    str.replace( /(\w+)(?=\.)|(\w+)\[(\w+)\]|\[(\w+)\]/g, function( $1, chain1, chain2, brackets1, brackets2 ) {
+    str.replace( /(\w+)(?=\.)|(\w+)\[(\w+)\]|\[(\w+)\]/g, function ( $1, chain1, chain2, brackets1, brackets2 ) {
 
         if( chain1 ) {
 
             points.push( points[ points.length - 1 ][ chain1 ] );
             keys.push( chain1 );
             str = str.replace( $1 + ".", "" );
-        } 
-        else if( chain2 && brackets1 ) {
+        } else if( chain2 && brackets1 ) {
 
             points.push( points[ points.length - 1 ][ chain2 ] );
             keys.push( chain2 );
             points.push( points[ points.length - 1 ][ brackets1 ] );
             keys.push( brackets1 );
             str = str.replace( $1, "" );
-        } 
-        else if( brackets2 ) {
+        } else if( brackets2 ) {
 
             points.push( points[ points.length - 1 ][ brackets2 ] );
             keys.push( brackets2 );
@@ -64,21 +72,27 @@ const strTransformPath = function( _store, str, cb ) {
 };
 
 // wcstore setData
-const _setData = function( data ) {
+const _setData = function ( data ) {
     this.setData( data );
 };
 
-const getDataRoot = function( dataPath ) {
+const getDataRoot = function ( dataPath ) {
     const reg = /^\w+(?=\.|\[)?/;
     return reg.exec( dataPath )[ 0 ];
 };
 
 // 数据observer 观察回调
-const observerCB = function( setdata, key, newval, dataPath ) {
+const observerCB = function ( setdata, key, newval, dataPath ) {
 
     // 防止赋 已经可以监听的值
     const getNewVal = ( val ) => {
-        return val.getSourceObject ? val.getSourceObject : val.getSourceArray ? val.getSourceArray : val;
+        let ret = val;
+        if( isObject( val ) && val.getSourceArray ) {
+            ret = val.getSourceObject;
+        } else if( isArray( val ) && val.getSourceArray ) {
+            ret = val.getSourceArray;
+        }
+        return ret;
     };
 
     // 小程序首页还未开始加载
@@ -119,15 +133,15 @@ const observerCB = function( setdata, key, newval, dataPath ) {
 };
 
 // 创建store
-const createStore = function( source ) {
+const createStore = function ( source ) {
     store = createObserver( Object.create( {} ), source, observerCB );
     return store;
 };
 
 // 为引用对象设置新属性
-const setStoreProp = function( storeDataPath, setkey, val ) {
+const setStoreProp = function ( storeDataPath, setkey, val ) {
 
-    strTransformPath( store, storeDataPath, function( point, key ) {
+    strTransformPath( store, storeDataPath, function ( point, key ) {
         const hasProp = point[ key ].hasOwnProperty( setkey );
 
         if( !hasProp ) {
@@ -146,12 +160,12 @@ const setStoreProp = function( storeDataPath, setkey, val ) {
 };
 
 // 防止框架之外的逻辑重写onShow 
-const __observerPageShowHook = function() {
+const __observerPageShowHook = function () {
 
     const onshow = this.onShow;
     let beforeShowEventCount = 0;
 
-    const beforeShow = function() {
+    const beforeShow = function () {
 
         if( beforeShowEventCount >= 1 ) {
             return;
@@ -190,8 +204,8 @@ const __observerPageShowHook = function() {
         // clear 当前页和组件 uodate
         updateData.clearUpdateData( useStore.currentPage.id );
 
-        const timer = setTimeout( () => { 
-            beforeShowEventCount = 0; 
+        const timer = setTimeout( () => {
+            beforeShowEventCount = 0;
             clearTimeout( timer );
         } );
 
@@ -202,12 +216,14 @@ const __observerPageShowHook = function() {
             return this.__onshow ? this.__onshow : onshow;
         },
         set( newval ) {
-            this.__onshow = function( ...arg ) {
+            this.__onshow = function ( ...arg ) {
                 let setNewShow = null;
                 [ beforeShow.bind( this ), newval.bind( this, ...arg ) ]
                     .map( ( fn, index ) => {
                         if( index == 0 ) beforeShowEventCount == 0 && fn();
-                        else { setNewShow = fn; }
+                        else {
+                            setNewShow = fn;
+                        }
                     } );
                 setNewShow();
             };
@@ -218,12 +234,12 @@ const __observerPageShowHook = function() {
 };
 
 // 防止框架之外的逻辑重写onUnload
-const __observerWxPageUnloadHook = function() {
+const __observerWxPageUnloadHook = function () {
     const onunload = this.onUnload;
     let beforeUnloadEventCount = 0;
 
-    const beforeUnload = function() {
-        
+    const beforeUnload = function () {
+
         if( beforeUnloadEventCount >= 1 ) {
             return;
         }
@@ -237,9 +253,9 @@ const __observerWxPageUnloadHook = function() {
         // 未对组件 removeUpdateData
         updateData.removeUpdateData( useStore.pages[ pageIndex ].__webviewId );
         useStore.pages.splice( pageIndex, 1 );
-        
-        const timer = setTimeout( () => { 
-            beforeUnloadEventCount = 0; 
+
+        const timer = setTimeout( () => {
+            beforeUnloadEventCount = 0;
             clearTimeout( timer );
         } );
     };
@@ -249,12 +265,14 @@ const __observerWxPageUnloadHook = function() {
             return this.__onunload ? this.__onunload : onunload;
         },
         set( newval ) {
-            this.__onunload = function( ...arg ) {
+            this.__onunload = function ( ...arg ) {
                 let setNewUnload = null;
                 [ beforeUnload.bind( this ), newval.bind( this, ...arg ) ]
                     .map( ( fn, index ) => {
                         if( index == 0 ) beforeUnloadEventCount == 0 && fn();
-                        else { setNewUnload = fn; }
+                        else {
+                            setNewUnload = fn;
+                        }
                     } );
                 setNewUnload();
             };
@@ -264,9 +282,11 @@ const __observerWxPageUnloadHook = function() {
 };
 
 // store 页面更新函数
-const updateStore = function( update, option = {} ) {
+const updateStore = function ( update, option = {} ) {
 
-    const { nowatch } = option;
+    const {
+        nowatch
+    } = option;
 
     if( !update || !isObject( update ) ) {
         console.error( "no updateStore data" );
@@ -280,7 +300,7 @@ const updateStore = function( update, option = {} ) {
     if( update && isObject( update ) ) {
 
         Object.keys( update ).forEach( dataPath => {
-            strTransformPath( store, dataPath, function( point, key, points, keys ) {
+            strTransformPath( store, dataPath, function ( point, key, points, keys ) {
                 //option 有__globalUpdate参数时 不检查mapstoreKey
                 if( that && !option.__globalUpdate ) {
                     const dataRoot = getDataRoot( dataPath );
@@ -384,7 +404,7 @@ const updateStore = function( update, option = {} ) {
 
 };
 
-const getfilterStore = function( mapStoreKey ) {
+const getfilterStore = function ( mapStoreKey ) {
     let mapStore = {};
     mapStoreKey.forEach( storekey => {
         if( this.data.hasOwnProperty( storekey ) ) console.error( `page has data key for ${ storekey }` );
@@ -396,7 +416,7 @@ const getfilterStore = function( mapStoreKey ) {
     return mapStore;
 };
 
-const addMapStore = function( addMapStoreKey ) {
+const addMapStore = function ( addMapStoreKey ) {
     if( !this ) return;
     if( !isArray( addMapStoreKey ) ) {
         console.error( "addMapStore param not array" );
@@ -406,7 +426,7 @@ const addMapStore = function( addMapStoreKey ) {
     _setData.bind( this, getfilterStore.call( this, diffMapStoreKey ) )();
 };
 
-const getMapStore = function( that, mapstore = [], watch = {} ) {
+const getMapStore = function ( that, mapstore = [], watch = {} ) {
     if( that._initfinish ) return;
 
     let isComponents = false;
@@ -446,7 +466,10 @@ const getMapStore = function( that, mapstore = [], watch = {} ) {
             isComponents ? that.__wxExparserNodeId__ : that.__webviewId,
             watch,
             isComponents,
-            isComponents ? { component: that, componentFromWebviewId: useStore.currentPage.id } : undefined
+            isComponents ? {
+                component: that,
+                componentFromWebviewId: useStore.currentPage.id
+            } : undefined
         );
     }
 
@@ -454,16 +477,18 @@ const getMapStore = function( that, mapstore = [], watch = {} ) {
     that._initfinish = true;
 };
 
-const appMapStore = function( mapstore ) {
+const appMapStore = function ( mapstore ) {
     // 未处理异步情况
     globalStore = mapstore;
 };
 
-const appUpdateStore = function( update, option = {} ) {
+const appUpdateStore = function ( update, option = {} ) {
     // 还未有 useStore.currentPage.id 说明 小程序page首页onShow还未完成
     updateStore.bind( useStore.currentPage.id !== null ?
         useStore.currentPage.webview :
-        null )( update, Object.assign( { __globalUpdate: true }, option ) );
+        null )( update, Object.assign( {
+        __globalUpdate: true
+    }, option ) );
 };
 
 export {

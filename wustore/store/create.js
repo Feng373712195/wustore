@@ -102,14 +102,17 @@ const observerCB = function ( setdata, key, newval, dataPath ) {
     }
 
     let cleanUpdate = false;
-    // 设置旧值 用于watch时返回
     let oldVal = null;
     if( isObject( setdata[ key ] ) || isArray( setdata[ key ] ) ) {
         // 改变了引用类型的值
-        oldVal = deep( setdata[ key ] );
+        oldVal = deep( setdata[ key ] );    
+        //缓存上一次变化的值 用于watch时返回
+        oldVals[ dataPath ] = oldVal;
         cleanUpdate = true;
     } else {
         oldVal = setdata[ key ];
+        //缓存上一次变化的值 用于watch时返回
+        oldVals[ dataPath ] = oldVal;
     }
 
     // 把源对象 设置新值

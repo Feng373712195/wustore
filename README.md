@@ -1,6 +1,6 @@
 # Wustore
 
-    wcstore 是一个小程序使用的全局状态管理工具
+    wustore 是一个小程序使用的全局状态管理工具
 
 ## API
 
@@ -11,13 +11,13 @@
     source （Object)接受一个对象参数，这个对象为store的默认值
 
 #### 返回：
-    
+wu    
     store对象 
 
 #### 例子：
     
     // app.js
-    improt { createStore  } from '/wcstore/store/create'
+    improt { createStore  } from '/wustore/store/create'
     const source = { x:1 }
     createStore( source )
 
@@ -34,7 +34,7 @@
 #### 例子：
     
     // app.js
-    import { mapGlobalStore } from '/wcstore/store/create'
+    import { mapGlobalStore } from '/wustore/store/create'
     mapGlobalStore(['user_info'])
 
 #### 贴士：
@@ -54,7 +54,7 @@
 #### 例子：
     
     // app,js
-    import { appUpdateData } from '/wcstore/store/create'
+    import { appUpdateData } from '/wustore/store/create'
     appUpdateData({ x:111 })
 
 #### 贴士：
@@ -78,7 +78,7 @@
     // page or component
     // store = {  x:{ y:1 },x2:{ y2:2 } }
 
-    import { getMapStore } from '/wcstore/store/create'
+    import { getMapStore } from '/wustore/store/create'
     
     // watch参数的两种写法
     const storeWatch = { 
@@ -127,7 +127,7 @@
     // page or component
     // store = {  x:{ y:1 },x2:{ y2:2 } }
 
-    import { getMapStore } from '/wcstore/store/create'
+    import { getMapStore } from '/wustore/store/create'
     
     Page({
         onLoad(){
@@ -160,7 +160,7 @@
     // page or component
     // store = {  x:{ y:{  } }  }
 
-    import { getMapStore，setStoreProp  } from '/wcstore/store/create'
+    import { getMapStore，setStoreProp  } from '/wustore/store/create'
     
     Page({
         onLoad(){

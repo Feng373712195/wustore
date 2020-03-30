@@ -94,7 +94,7 @@
 
 #### 参数：
 
-    mapStore （Array) 接受一个数组参数，调用了getMapStore 的页面或者组件的 mapStore 参数 都会合并 mapGlobalStore的 mapStore 
+    mapStore （Array) 接受一个数组参数，调用了getMapStore的页面或者组件的mapStore参数都会合并appMapStore的参数
 
 #### 返回：
 

@@ -103,12 +103,12 @@
 #### 例子：
     
     // app.js
-    import { mapGlobalStore } from '/wustore/store/create'
-    mapGlobalStore(['user_info'])
+    import { appMapStore } from '/wustore/store/create'
+    appMapStore(['user_info'])
 
 #### 贴士：
 
-    如需调用mapGlobalStore ，则建议在 app.js 调用 mapGlobalStore  
+    如需调用appMapStore ，则建议在 app.js 调用appMapStore  
 
 #### 参数：
 
@@ -184,7 +184,7 @@
 
 #### 贴士：
     
-     - watch 的回调函数会返回三个参数 第一个是当前的页面或者组件实例，第二个参数是改变之前的值，如果改变之前的值为引用对象则为一个改变前的值的深拷贝，第三个参数为当前对象也就是但是store中对象数据的值
+     watch 的回调函数会返回三个参数 第一个是当前的页面或者组件实例，第二个参数是改变之前的值，如果改变之前的值为引用对象则为一个改变前的值的深拷贝，第三个参数为当前对象也就是但是store中对象数据的值
 
 
 ### - updateStore

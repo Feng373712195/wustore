@@ -3,9 +3,13 @@
    wustore 是一个小程序使用的全局状态管理工具，参考了vuex的一些概念与借鉴了vue数据拦截的原理。
    
    #### 优势
+   
    1、当全局状态修改时，后台页面组件不会发发生更新， 会在页面是触发onShow时再去进行更新。
+   
    2、可以监听每次状态的修改，并知道修改了哪个属性。
+   
    3、每次修改都是利用了数据拦截进行收集，并在拦截时判断状态的值是否改变是否需要修改，小程序性能得到优化。
+   
    
 ---
     
@@ -38,6 +42,7 @@
         }
     })
 -
+
     //组件
     import { getMapStore } from 'wustore/store/create'
     Component({
@@ -60,7 +65,7 @@
     
 ## API
 
-### ceateStore
+###  - ceateStore
        
 #### 作用：
     
@@ -81,7 +86,7 @@
     const source = { x:1 }
     createStore( source )
 
-### appMapStore
+### - appMapStore
 
 #### 作用：
     
@@ -109,7 +114,7 @@
 
     updateData （Object) 接受一个对象参数，相当与 小程序setData的第一个参数，不过只能用来更新store的数据，功能与 this.updateStore 一致，只不过 this.updateStore 需要页面或者组件赋使用getMapStore之后才会对this赋予updateStore方法更新 store.appUpdateStore与updateStore区别与可以在app.onLanch时或者app.js一些全局方法中更新store。 
 
-### appUpdateStore
+### - appUpdateStore
 
 #### 作用：
     
@@ -129,7 +134,7 @@
 
     参考updateStore贴士
 
-### getMapStore
+### - getMapStore
 
     此方法来为页面或者组件注入要使用的全局状态
 
@@ -182,7 +187,7 @@
      - watch 的回调函数会返回三个参数 第一个是当前的页面或者组件实例，第二个参数是改变之前的值，如果改变之前的值为引用对象则为一个改变前的值的深拷贝，第三个参数为当前对象也就是但是store中对象数据的值
 
 
-### updateStore
+### - updateStore
 
 #### 作用：
     
@@ -217,7 +222,7 @@
     store.对象属性   正确  store[‘对象属性’]  错误
     store[数组索引]  正确  store.数组索引     错误
 
-### setStoreProp
+### - setStoreProp
 
 #### 作用：
     
